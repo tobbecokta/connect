@@ -31,6 +31,7 @@ interface MessageListProps {
 const MessageList: React.FC<MessageListProps> = ({ messages }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const firstLoadRef = useRef<boolean>(true);
   const [userHasScrolled, setUserHasScrolled] = useState(false);
   const [prevMessagesLength, setPrevMessagesLength] = useState(messages.length);
 
@@ -49,33 +50,45 @@ const MessageList: React.FC<MessageListProps> = ({ messages }) => {
   };
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
+  // Consolidated scroll logic into a single useEffect
   useEffect(() => {
     // Only scroll to bottom if:
-    // 1. User hasn't manually scrolled up, OR
-    // 2. New message has been added
+    // 1. It's the initial load, OR
+    // 2. User is already at the bottom, OR
+    // 3. A new message has been added
     const hasNewMessages = messages.length > prevMessagesLength;
     
-    if (!userHasScrolled || hasNewMessages) {
+    // Check if this is the first load
+    if (firstLoadRef.current) {
+      console.log('First load - scrolling to bottom');
+      scrollToBottom();
+      firstLoadRef.current = false;
+    } else if (!userHasScrolled || hasNewMessages) {
+      // Only scroll if the user is already at the bottom or there are new messages
       scrollToBottom();
     }
     
     setPrevMessagesLength(messages.length);
+    
+    // Debug info
+    if (hasNewMessages) {
+      console.log('New messages arrived - scrolling to bottom');
+    }
   }, [messages, userHasScrolled, prevMessagesLength]);
 
-  // Log messages for debugging
+  // Monitor conversation changes to reset the firstLoad flag
   useEffect(() => {
-    console.log('Rendering messages in MessageList:', messages);
-  }, [messages]);
-
-  // Scroll to bottom on new messages
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    // If the messages array is reset (length becomes 0), treat this as a new conversation
+    if (messages.length === 0) {
+      firstLoadRef.current = true;
+      setUserHasScrolled(false);
     }
-  }, [messages]);
+  }, [messages.length]);
 
   return (
     <div 

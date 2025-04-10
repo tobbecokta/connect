@@ -199,20 +199,44 @@ const MessagingApp = () => {
   useEffect(() => {
     if (!selectedChat) return;
     
-    // Fetch messages when a conversation is selected
-    fetchMessages(String(selectedChat));
+    // Initial fetch already happens in the selectedChat effect
+    // No need to fetch here again
     
-    // Poll for new messages
+    // Set up polling with a longer interval
     const intervalId = setInterval(() => {
       console.log(`Polling for messages in conversation ${selectedChat}...`);
-      fetchMessages(String(selectedChat));
-    }, 3000); // Poll every 3 seconds
+      
+      // Get current number of messages for comparison
+      const currentMessageCount = messages.length;
+      
+      // Check if we need to update by counting messages first
+      const checkForNewMessages = async () => {
+        try {
+          const { data } = await supabase
+            .from('messages')
+            .select('id')
+            .eq('conversation_id', selectedChat);
+            
+          // Only fetch full messages if the count has changed
+          if (data && data.length !== currentMessageCount) {
+            console.log(`New messages detected (${data.length} vs ${currentMessageCount}), fetching...`);
+            fetchMessages(String(selectedChat));
+          } else {
+            console.log('No new messages, skipping fetch');
+          }
+        } catch (error) {
+          console.error('Error checking for new messages:', error);
+        }
+      };
+      
+      checkForNewMessages();
+    }, 10000); // Increased to 10 seconds for less frequent polling
     
     // Cleanup interval on unmount or when conversation changes
     return () => {
       clearInterval(intervalId);
     };
-  }, [selectedChat]);
+  }, [selectedChat, messages.length]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -558,6 +582,10 @@ const MessagingApp = () => {
   // Update the useEffect that runs when selectedChat changes to check opt-out status
   useEffect(() => {
     if (selectedChat) {
+      // Clear previous messages first to signal a conversation change
+      setMessages([]);
+      
+      // Then fetch new messages
       fetchMessages(String(selectedChat));
 
       // Mark the conversation as read
