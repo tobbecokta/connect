@@ -1,16 +1,14 @@
-// API endpoint for status checking
-
-addEventListener('fetch', event => {
-  event.respondWith(handleRequest(event.request));
-});
-
-async function handleRequest(request) {
+// API status endpoint
+export async function onRequest(context) {
   return new Response(JSON.stringify({
     status: "ok",
-    environment: "production",
-    timestamp: new Date().toISOString()
+    message: "API is working",
+    timestamp: new Date().toISOString(),
+    env: {
+      supabaseUrl: context.env.SUPABASE_URL ? "Set" : "Not set"
+    }
   }), {
-    headers: { 
+    headers: {
       "Content-Type": "application/json",
       "Access-Control-Allow-Origin": "*"
     }
