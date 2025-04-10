@@ -73,6 +73,25 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
   }
 
   if (message.automated) {
+    // Special styling for campaign opt-out messages
+    if (message.text.includes('removed from campaign') || message.text.includes('opted out of')) {
+      return (
+        <div className="flex justify-center my-4">
+          <div className="bg-purple-100 border border-purple-300 text-purple-800 px-4 py-2 rounded-full flex items-center max-w-xs md:max-w-md">
+            <svg 
+              viewBox="0 0 24 24" 
+              className="w-4 h-4 mr-2 fill-current text-purple-700"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-12h2v4h-2zm0 6h2v2h-2z"/>
+            </svg>
+            <p className="text-sm font-medium">{message.text}</p>
+          </div>
+        </div>
+      );
+    }
+    
+    // Standard automated message styling
     return (
       <div className={`flex ${message.sender === 'me' ? 'justify-end' : 'justify-start'} mb-3`}>
         <div

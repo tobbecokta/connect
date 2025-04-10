@@ -380,6 +380,86 @@ Deno.serve(async (req: Request) => {
 
     console.log(`✅ Saved new message:`, newMessage);
     
+    // Check if this is a reply to a campaign
+    console.log(`🔍 Checking if this is a reply to a campaign for contact ${contact.id}`);
+    try {
+      const { data: relatedCampaigns, error: campaignError } = await supabaseClient
+        .from("messages")
+        .select("bulk_campaign_id, bulk_campaign_name")
+        .eq("conversation_id", conversation.id)
+        .eq("sender", "me")
+        .is("bulk_campaign_id", "not.null")
+        .order("created_at", { ascending: false })
+        .limit(1);
+      
+      if (campaignError) {
+        console.error("❌ Error checking for campaign messages:", campaignError);
+      } else if (relatedCampaigns && relatedCampaigns.length > 0 && relatedCampaigns[0].bulk_campaign_id) {
+        const campaignId = relatedCampaigns[0].bulk_campaign_id;
+        const campaignName = relatedCampaigns[0].bulk_campaign_name || `ID: ${campaignId}`;
+        
+        console.log(`✅ Found related campaign: ${campaignName} (${campaignId})`);
+        
+        // Check if user is already marked as having replied to this campaign
+        const { data: existingReplies, error: replyCheckError } = await supabaseClient
+          .from("campaign_replies")
+          .select("*")
+          .eq("campaign_id", campaignId)
+          .eq("contact_id", contact.id)
+          .single();
+        
+        if (replyCheckError) {
+          // No existing reply record found, create one
+          console.log(`🔔 Recording reply to campaign ${campaignId} from contact ${contact.id}`);
+          
+          const { error: insertError } = await supabaseClient
+            .from("campaign_replies")
+            .insert({
+              campaign_id: campaignId,
+              contact_id: contact.id,
+              conversation_id: conversation.id,
+              first_reply_time: new Date().toISOString(),
+              was_opted_out: true
+            });
+          
+          if (insertError) {
+            console.error("❌ Error recording campaign reply:", insertError);
+          } else {
+            console.log(`✅ Successfully recorded reply to campaign ${campaignId}`);
+            
+            // Add a system message notification about being removed from the campaign
+            try {
+              const { error: systemMsgError } = await supabaseClient
+                .from("messages")
+                .insert([
+                  {
+                    conversation_id: conversation.id,
+                    sender: "them",
+                    text: `📣 This contact has been automatically removed from campaign "${campaignName}" because they replied`,
+                    time: new Date().toISOString(),
+                    is_automated: true,
+                  },
+                ]);
+                
+              if (systemMsgError) {
+                console.error("❌ Error creating campaign opt-out notification message:", systemMsgError);
+              } else {
+                console.log("✅ Added notification about campaign opt-out");
+              }
+            } catch (systemError) {
+              console.error("❌ Exception adding campaign opt-out message:", systemError);
+            }
+          }
+        } else {
+          console.log(`ℹ️ Contact has already replied to this campaign before`);
+        }
+      } else {
+        console.log(`ℹ️ No related campaign found for this conversation`);
+      }
+    } catch (campaignCheckError) {
+      console.error("❌ Error during campaign reply check:", campaignCheckError);
+    }
+    
     // Now handle STOPP message processing if needed
     if (isStoppMessage) {
       console.log(`🚫 Processing STOPP message: registering opt-out for ${from}`);
