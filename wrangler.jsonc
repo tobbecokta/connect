@@ -1,7 +1,7 @@
 {
   "name": "connect",
   "compatibility_date": "2025-04-10",
-  "main": "./functions/_middleware.js",
+  "main": "workers-site/index.js",
   "site": {
     "bucket": "./dist"
   },
