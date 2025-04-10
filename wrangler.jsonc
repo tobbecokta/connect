@@ -4,6 +4,14 @@
   "assets": {
     "directory": "./dist"
   },
+  "route": "",
+  "build": {
+    "command": "npm run build",
+    "directory": "dist"
+  },
+  "site": {
+    "bucket": "dist"
+  },
   "env": {
     "SUPABASE_URL": "SUPABASE_URL",
     "SUPABASE_SERVICE_ROLE_KEY": "SUPABASE_SERVICE_ROLE_KEY"
