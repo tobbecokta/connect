@@ -1,67 +1,32 @@
-import { getAssetFromKV, serveSinglePageApp } from '@cloudflare/kv-asset-handler'
-
-/**
- * The DEBUG flag will do two things:
- * 1. we will skip caching on the edge, which makes it easier to debug
- * 2. we will return an error message on exception in your Response rather than the default 404.html page
- */
-const DEBUG = false
+// Simple worker script without external dependencies
 
 addEventListener('fetch', event => {
-  try {
-    event.respondWith(handleEvent(event))
-  } catch (e) {
-    if (DEBUG) {
-      return event.respondWith(
-        new Response(e.message || e.toString(), {
-          status: 500,
-        }),
-      )
-    }
-    event.respondWith(new Response('Internal Error', { status: 500 }))
+  event.respondWith(handleRequest(event.request));
+});
+
+async function handleRequest(request) {
+  const url = new URL(request.url);
+  
+  // Handle API requests
+  if (url.pathname.startsWith('/api/')) {
+    // Forward to API endpoints
+    return fetch(request);
   }
-})
-
-async function handleEvent(event) {
-  const url = new URL(event.request.url)
-  let options = {}
-
-  /**
-   * You can add custom logic to how we fetch your assets
-   * by configuring the function `mapRequestToAsset`
-   */
-  // options.mapRequestToAsset = handlePrefix(/^\/docs/)
-
+  
+  // Handle static assets
   try {
-    if (DEBUG) {
-      // customize caching
-      options.cacheControl = {
-        bypassCache: true,
-      }
+    // Try to fetch the requested resource from the asset manifest
+    const response = await fetch(request);
+    if (response.ok) return response;
+    
+    // If not found and it's not an asset request, serve index.html for SPA routing
+    if (!url.pathname.includes('.')) {
+      return fetch(`${url.origin}/index.html`);
     }
-
-    // Check if the request is for the API
-    if (url.pathname.startsWith('/api/')) {
-      // Forward to the API function
-      return fetch(event.request)
-    }
-
-    return await getAssetFromKV(event, options)
+    
+    return response;
   } catch (e) {
-    // if an error is thrown try to serve the asset at 404.html
-    if (!DEBUG) {
-      try {
-        let notFoundResponse = await getAssetFromKV(event, {
-          mapRequestToAsset: req => new Request(`${new URL(req.url).origin}/index.html`, req),
-        })
-
-        return new Response(notFoundResponse.body, {
-          ...notFoundResponse,
-          status: 404,
-        })
-      } catch (e) {}
-    }
-
-    return new Response(e.message || e.toString(), { status: 500 })
+    // If there's an error, serve index.html as a fallback
+    return new Response(`Error: ${e.message}`, { status: 500 });
   }
 } 

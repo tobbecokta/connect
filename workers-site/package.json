@@ -3,8 +3,5 @@
   "name": "connect-worker",
   "version": "1.0.0",
   "description": "Worker for Connect app",
-  "main": "index.js",
-  "dependencies": {
-    "@cloudflare/kv-asset-handler": "^0.3.0"
-  }
+  "main": "index.js"
 } 

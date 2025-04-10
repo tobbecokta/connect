@@ -1,0 +1,6 @@
+{
+  "private": true,
+  "name": "connect-functions",
+  "version": "1.0.0",
+  "description": "Cloudflare Functions for Connect app"
+} 
