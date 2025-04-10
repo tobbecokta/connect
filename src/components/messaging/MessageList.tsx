@@ -4,7 +4,7 @@ import MessageItem from './MessageItem';
 interface MessageListProps {
   messages: Array<{
     id: number | string;
-    sender: 'me' | 'them';
+    sender: 'me' | 'them' | 'system';
     text: string;
     time: string;
     automated?: boolean;

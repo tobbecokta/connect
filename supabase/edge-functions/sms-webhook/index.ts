@@ -345,6 +345,14 @@ Deno.serve(async (req: Request) => {
     console.log(`💾 Storing new message in conversation ${conversation.id}`);
     const createdTime = created ? new Date(created).toISOString() : new Date().toISOString();
     
+    // First, check if this is a STOPP message
+    const isStoppMessage = message.toUpperCase().includes('STOPP') || message.toUpperCase().includes('STOP');
+    
+    if (isStoppMessage) {
+      console.log(`⚠️ STOPP message detected: "${message}" from ${from} to ${to}`);
+    }
+    
+    // Insert the actual message from the user
     const { data: newMessage, error: messageError } = await supabaseClient
       .from("messages")
       .insert([
@@ -371,14 +379,13 @@ Deno.serve(async (req: Request) => {
     }
 
     console.log(`✅ Saved new message:`, newMessage);
-    console.log(`🎉 SMS processing complete`);
-
-    // Check if this is a STOPP message
-    if (message.toUpperCase().includes('STOPP') || message.toUpperCase().includes('STOP')) {
-      console.log(`STOPP message detected from ${from} to ${to}`);
+    
+    // Now handle STOPP message processing if needed
+    if (isStoppMessage) {
+      console.log(`🚫 Processing STOPP message: registering opt-out for ${from}`);
       
       // Register an opt-out
-      await supabaseClient
+      const { error: optOutError } = await supabaseClient
         .from('bulk_sms_opt_outs')
         .insert({
           recipient_number: from,
@@ -386,7 +393,39 @@ Deno.serve(async (req: Request) => {
           reason: 'STOP_MESSAGE'
         })
         .select();
+        
+      if (optOutError) {
+        console.error("❌ Error registering opt-out:", optOutError);
+      } else {
+        console.log(`✅ Successfully registered opt-out for ${from}`);
+        
+        // Add a system message notification about the opt-out
+        try {
+          const { data: systemMsg, error: systemMsgError } = await supabaseClient
+            .from("messages")
+            .insert([
+              {
+                conversation_id: conversation.id,
+                sender: "them", // Use 'them' instead of 'system' for compatibility
+                text: "⚠️ This contact has opted out of receiving bulk SMS by texting STOPP",
+                time: new Date().toISOString(),
+                is_automated: true,
+              },
+            ])
+            .select();
+            
+          if (systemMsgError) {
+            console.error("❌ Error creating system notification message:", systemMsgError);
+          } else {
+            console.log("✅ Added system notification about opt-out status:", systemMsg);
+          }
+        } catch (systemError) {
+          console.error("❌ Exception adding system message:", systemError);
+        }
+      }
     }
+    
+    console.log(`🎉 SMS processing complete`);
 
     return new Response(
       JSON.stringify({

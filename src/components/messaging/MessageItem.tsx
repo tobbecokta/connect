@@ -1,11 +1,11 @@
 import React from 'react';
 import { twMerge } from 'tailwind-merge';
-import { Info } from 'lucide-react';
+import { Info, AlertCircle } from 'lucide-react';
 
 interface MessageItemProps {
   message: {
     id: number | string;
-    sender: 'me' | 'them';
+    sender: 'me' | 'them' | 'system';
     text: string;
     time: string;
     automated?: boolean;
@@ -59,6 +59,18 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
     }
     return null;
   };
+
+  // System message
+  if (message.sender === 'system') {
+    return (
+      <div className="flex justify-center my-4">
+        <div className="bg-gray-100 border border-gray-300 text-gray-700 px-4 py-2 rounded-full flex items-center max-w-xs md:max-w-md">
+          <AlertCircle className="w-4 h-4 mr-2 text-red-500" />
+          <p className="text-sm font-medium">{message.text}</p>
+        </div>
+      </div>
+    );
+  }
 
   if (message.automated) {
     return (
