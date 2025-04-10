@@ -243,14 +243,52 @@ export const createOrUpdateConversation = async ({
 };
 
 export const markConversationAsRead = async (id: string) => {
-  const { data, error } = await supabase
-    .from('conversations')
-    .update({ unread_count: 0 })
-    .eq('id', id)
-    .select();
+  // Log that we're marking the conversation as read for debugging
+  console.log(`🔍 Marking conversation ${id} as read`);
   
-  if (error) throw error;
-  return data[0];
+  try {
+    // First verify the current unread count
+    const { data: currentConversation, error: fetchError } = await supabase
+      .from('conversations')
+      .select('unread_count, last_message, last_message_time')
+      .eq('id', id)
+      .single();
+      
+    if (fetchError) {
+      console.error(`❌ Error fetching conversation ${id}:`, fetchError);
+      throw fetchError;
+    }
+    
+    console.log(`Current unread count for conversation ${id}: ${currentConversation?.unread_count || 0}`);
+    
+    // Only update if unread count is greater than 0
+    if (currentConversation && currentConversation.unread_count > 0) {
+      const { data, error } = await supabase
+        .from('conversations')
+        .update({ 
+          unread_count: 0,
+          // Re-set these in case automated messages changed them
+          last_message: currentConversation.last_message,
+          last_message_time: currentConversation.last_message_time
+        })
+        .eq('id', id)
+        .select();
+      
+      if (error) {
+        console.error(`❌ Error updating conversation ${id}:`, error);
+        throw error;
+      }
+      
+      console.log(`✅ Successfully marked conversation ${id} as read`);
+      return data[0];
+    } else {
+      console.log(`ℹ️ Conversation ${id} already has unread_count of 0, no update needed`);
+      return currentConversation;
+    }
+  } catch (error) {
+    console.error(`❌ Exception in markConversationAsRead for ${id}:`, error);
+    throw error;
+  }
 };
 
 // Messages

@@ -561,14 +561,27 @@ const MessagingApp = () => {
       fetchMessages(String(selectedChat));
 
       // Mark the conversation as read
-      markConversationAsRead(String(selectedChat));
-      
-      // Update unread count in UI
-      setConversations(prev => 
-        prev.map(conv => 
-          conv.id === selectedChat ? { ...conv, unread: 0 } : conv
-        )
-      );
+      markConversationAsRead(String(selectedChat))
+        .then(() => {
+          console.log(`Successfully marked conversation ${selectedChat} as read`);
+          
+          // Update unread count in UI immediately
+          setConversations(prev => 
+            prev.map(conv => 
+              conv.id === selectedChat ? { ...conv, unread: 0 } : conv
+            )
+          );
+          
+          // Add to our tracking of read conversations
+          setTrackedReadConversations(prev => {
+            const newSet = new Set(prev);
+            newSet.add(String(selectedChat));
+            return newSet;
+          });
+        })
+        .catch(err => {
+          console.error(`Error marking conversation ${selectedChat} as read:`, err);
+        });
 
       // Get conversation details for opt-out check
       const selectedConversation = conversations.find(c => c.id === selectedChat);
@@ -844,19 +857,37 @@ const MessagingApp = () => {
       // Mark conversation as read since user is viewing it
       markConversationAsRead(message.conversation_id);
     } else {
-      // Increment unread count for the conversation in our local state
-      setConversations(prev => 
-        prev.map(conv => 
-          conv.id === message.conversation_id 
-            ? { 
-                ...conv, 
-                lastMessage: message.text,
-                time: formatDate(message.created_at || message.time),
-                unread: (conv.unread || 0) + 1 
-              } 
-            : conv
-        )
-      );
+      // Only increment unread count if this is not an automated message
+      if (!message.is_automated) {
+        // Increment unread count for the conversation in our local state
+        setConversations(prev => 
+          prev.map(conv => 
+            conv.id === message.conversation_id 
+              ? { 
+                  ...conv, 
+                  lastMessage: message.text,
+                  time: formatDate(message.created_at || message.time),
+                  unread: (conv.unread || 0) + 1 
+                } 
+              : conv
+          )
+        );
+      } else {
+        // For automated messages, update last message but don't increment unread count
+        setConversations(prev => 
+          prev.map(conv => 
+            conv.id === message.conversation_id 
+              ? { 
+                  ...conv, 
+                  lastMessage: message.text,
+                  time: formatDate(message.created_at || message.time),
+                  // Don't increment unread count for automated messages
+                } 
+              : conv
+          )
+        );
+        console.log('Automated message received, not incrementing unread count');
+      }
     }
 
     // Play notification sound

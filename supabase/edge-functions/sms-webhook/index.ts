@@ -429,6 +429,14 @@ Deno.serve(async (req: Request) => {
             
             // Add a system message notification about being removed from the campaign
             try {
+              // First, check the current unread count to preserve it
+              const { data: currentConversation, error: convReadError } = await supabaseClient
+                .from("conversations")
+                .select("unread_count")
+                .eq("id", conversation.id)
+                .single();
+                
+              // Add the system notification message
               const { error: systemMsgError } = await supabaseClient
                 .from("messages")
                 .insert([
@@ -445,6 +453,17 @@ Deno.serve(async (req: Request) => {
                 console.error("❌ Error creating campaign opt-out notification message:", systemMsgError);
               } else {
                 console.log("✅ Added notification about campaign opt-out");
+                
+                // Restore the previous unread count so we don't increase it for the notification
+                if (!convReadError && currentConversation) {
+                  await supabaseClient
+                    .from("conversations")
+                    .update({
+                      unread_count: currentConversation.unread_count
+                    })
+                    .eq("id", conversation.id);
+                  console.log("✅ Preserved original unread count:", currentConversation.unread_count);
+                }
               }
             } catch (systemError) {
               console.error("❌ Exception adding campaign opt-out message:", systemError);
@@ -481,12 +500,20 @@ Deno.serve(async (req: Request) => {
         
         // Add a system message notification about the opt-out
         try {
+          // First, check the current unread count to preserve it
+          const { data: currentConversation, error: convReadError } = await supabaseClient
+            .from("conversations")
+            .select("unread_count")
+            .eq("id", conversation.id)
+            .single();
+            
+          // Add the system notification message
           const { data: systemMsg, error: systemMsgError } = await supabaseClient
             .from("messages")
             .insert([
               {
                 conversation_id: conversation.id,
-                sender: "them", // Use 'them' instead of 'system' for compatibility
+                sender: "them",
                 text: "⚠️ This contact has opted out of receiving bulk SMS by texting STOPP",
                 time: new Date().toISOString(),
                 is_automated: true,
@@ -498,6 +525,17 @@ Deno.serve(async (req: Request) => {
             console.error("❌ Error creating system notification message:", systemMsgError);
           } else {
             console.log("✅ Added system notification about opt-out status:", systemMsg);
+            
+            // Restore the previous unread count so we don't increase it for the notification
+            if (!convReadError && currentConversation) {
+              await supabaseClient
+                .from("conversations")
+                .update({
+                  unread_count: currentConversation.unread_count
+                })
+                .eq("id", conversation.id);
+              console.log("✅ Preserved original unread count:", currentConversation.unread_count);
+            }
           }
         } catch (systemError) {
           console.error("❌ Exception adding system message:", systemError);
