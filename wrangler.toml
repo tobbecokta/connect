@@ -5,5 +5,6 @@ compatibility_date = "2025-04-10"
 [site]
 bucket = "./dist"
 
-[build]
-command = "npm run build" 
+# Remove explicit build command since Pages will handle it
+# [build]
+# command = "npm run build" 
