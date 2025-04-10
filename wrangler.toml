@@ -1,4 +1,4 @@
-# Simple configuration for Cloudflare Pages
+# Minimal Cloudflare Pages configuration
 name = "connect"
 compatibility_date = "2025-04-10"
 

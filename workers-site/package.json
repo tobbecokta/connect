@@ -1,7 +1,0 @@
-{
-  "private": true,
-  "name": "connect-worker",
-  "version": "1.0.0",
-  "description": "Worker for Connect app",
-  "main": "index.js"
-} 
