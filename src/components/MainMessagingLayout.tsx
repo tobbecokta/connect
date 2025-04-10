@@ -1,0 +1,37 @@
+interface MainMessagingLayoutProps {
+  conversations: any[];
+  messages: any[];
+  selectedChat: number | null;
+  phoneNumbers: any[];
+  activePhoneNumber: string;
+  contacts: any[];
+  setSelectedChat: (id: number | null) => void;
+  setShowMobileConversation: (show: boolean) => void;
+  showMobileConversation: boolean;
+  setMessageText: (text: string) => void;
+  setShowDeviceModal: (show: boolean) => void;
+  showDeviceModal: boolean;
+  setActivePhoneNumber: (id: string) => void;
+  setShowSettings: (show: boolean) => void;
+  setShowFilterDropdown: (show: boolean) => void;
+  setShowSearchDropdown: (show: boolean) => void;
+  setShowNewSmsModal: (show: boolean) => void;
+  showNewSmsModal: boolean;
+  setEditingContactName: (editing: boolean) => void;
+  editingContactName: boolean;
+  contactNameEdit: string;
+  setContactNameEdit: (name: string) => void;
+  setShowMoreOptions: (show: boolean) => void;
+  handleSaveContactName: () => void;
+  handleEditContactName: () => void;
+  handleOpenBulkSms: () => void;
+  handleOpenContacts: () => void;
+  handleSendNewSms: (recipient: string, message: string, recipientName: string) => void;
+  sendMessage: (text: string) => void;
+  handleBackToList: () => void;
+  searchText: string;
+  setSearchText: (text: string) => void;
+  activeDeviceInfo: { id: string; device: string };
+  sortOrder: 'latest' | 'oldest' | 'unread';
+  setSortOrder: (order: 'latest' | 'oldest' | 'unread') => void;
+} 
